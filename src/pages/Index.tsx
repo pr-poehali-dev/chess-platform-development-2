@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 
 const PIECES: Record<string, string> = {
@@ -25,11 +25,11 @@ const MODES = [
 ];
 
 const NAV = [
-  { name: 'Главная', icon: 'Home' },
-  { name: 'Профиль', icon: 'User' },
-  { name: 'Лидеры', icon: 'Trophy' },
-  { name: 'История', icon: 'History' },
-  { name: 'Настройки', icon: 'Settings' },
+  { id: 'home', name: 'Главная', icon: 'Home' },
+  { id: 'games', name: 'Партии', icon: 'History' },
+  { id: 'leaders', name: 'Лидеры', icon: 'Trophy' },
+  { id: 'settings', name: 'Настройки', icon: 'Settings' },
+  { id: 'profile', name: 'Профиль', icon: 'User' },
 ];
 
 const LEADERS = [
@@ -43,9 +43,48 @@ const LEADERS = [
 const Index = () => {
   const [mode, setMode] = useState('rapid');
   const [showModes, setShowModes] = useState(false);
+  const [tab, setTab] = useState('home');
+  const [searching, setSearching] = useState(false);
+  const [searchTime, setSearchTime] = useState(0);
+
+  useEffect(() => {
+    if (!searching) return;
+    setSearchTime(0);
+    const t = setInterval(() => setSearchTime((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [searching]);
+
+  const activeMode = MODES.find((m) => m.id === mode)!;
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden pb-24 md:pb-0">
+      {/* Searching overlay */}
+      {searching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md animate-float-up">
+          <div className="text-center px-6 max-w-sm w-full">
+            <div className="relative w-32 h-32 mx-auto mb-8">
+              <div className="absolute inset-0 rounded-full border-4 border-secondary" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center text-5xl">♞</div>
+            </div>
+            <h2 className="font-display text-3xl font-700 tracking-wide mb-2">ПОИСК СОПЕРНИКА</h2>
+            <p className="text-muted-foreground mb-1">
+              Режим: <span className="text-primary font-600">{activeMode.name}</span> · {activeMode.time}
+            </p>
+            <p className="text-sm text-muted-foreground mb-8">
+              Подбираем по рейтингу · {String(Math.floor(searchTime / 60)).padStart(2, '0')}:
+              {String(searchTime % 60).padStart(2, '0')}
+            </p>
+            <button
+              onClick={() => setSearching(false)}
+              className="px-8 py-3 rounded-xl bg-secondary border border-border font-600 hover:bg-secondary/70 transition-all"
+            >
+              Отменить поиск
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Ambient glow background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px]" />
@@ -64,11 +103,12 @@ const Index = () => {
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-1">
-            {NAV.map((item, i) => (
+            {NAV.map((item) => (
               <button
-                key={item.name}
+                key={item.id}
+                onClick={() => setTab(item.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-500 transition-all ${
-                  i === 0
+                  tab === item.id
                     ? 'bg-secondary text-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }`}
@@ -148,7 +188,10 @@ const Index = () => {
                       </button>
                     ))}
                   </div>
-                  <button className="flex items-center justify-center gap-3 w-full px-8 py-4 rounded-xl bg-primary text-primary-foreground font-display text-xl font-700 tracking-wide hover:scale-[1.01] transition-transform">
+                  <button
+                    onClick={() => setSearching(true)}
+                    className="flex items-center justify-center gap-3 w-full px-8 py-4 rounded-xl bg-primary text-primary-foreground font-display text-xl font-700 tracking-wide hover:scale-[1.01] transition-transform"
+                  >
                     <Icon name="Search" size={22} />
                     НАЙТИ СОПЕРНИКА
                   </button>
@@ -284,6 +327,30 @@ const Index = () => {
           ))}
         </section>
       </main>
+
+      {/* Bottom navigation (mobile + desktop) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+        <div className="grid grid-cols-5">
+          {NAV.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex flex-col items-center justify-center gap-1 py-3 transition-all ${
+                tab === item.id ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <div
+                className={`flex items-center justify-center w-11 h-8 rounded-lg transition-all ${
+                  tab === item.id ? 'bg-primary/10' : ''
+                }`}
+              >
+                <Icon name={item.icon} size={20} />
+              </div>
+              <span className="text-[11px] font-600">{item.name}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
       <footer className="relative z-10 border-t border-border/60 mt-20">
         <div className="container py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
